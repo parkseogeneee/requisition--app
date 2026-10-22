@@ -229,6 +229,8 @@
   .dl .r{display:flex;gap:8px;padding:9px 2px;border-bottom:1px solid var(--line)}
   .dl .r span:first-child{flex:0 0 40%;color:var(--muted);font-size:12.5px}
   .dl .r span:last-child{flex:1 1 auto;min-width:0;font-weight:600;font-size:13.5px;word-break:break-word}
+  .dl .r span.v.good{color:var(--ok)}          /* Signed, Completed, Released */
+  .dl .r span.v.bad {color:var(--bad)}         /* Not released, Cancelled */
 
   /* verdict card */
   .card{flex:none;border-radius:14px;padding:20px 16px;text-align:center;margin-bottom:10px}
@@ -1100,11 +1102,27 @@
     }, ms||5000);
   }
 
+  /* Green once something is actually done, red while fuel is still unreleased
+     or the slip was cancelled, plain black for anything merely waiting. */
+  function toneOf(v){
+    var t=String(v==null?'':v).trim().toUpperCase();
+    if(t==='SIGNED' || t==='COMPLETED' || t==='RELEASED') return ' good';
+    if(t==='NOT RELEASED' || t==='VOIDED' || t==='CANCELLED') return ' bad';
+    return '';
+  }
+
   function detailRows(pairs){
     var h='<div class="dl">';
     pairs.forEach(function(p){ if(p[1]==null||p[1]==='') return;
-      h+='<div class="r"><span>'+icoSvg(p[0])+escq(p[0])+':</span><span>'+escq(p[1])+'</span></div>'; });
+      h+='<div class="r"><span>'+icoSvg(p[0])+escq(p[0])+':</span><span class="v'+toneOf(p[1])+'">'+escq(p[1])+'</span></div>'; });
     return h+'</div>';
+  }
+  /* date and time, for "when was this requested" */
+  function fmtWhenUI(v){
+    if(!v) return '';
+    var d=new Date(v); if(isNaN(d.getTime())) return String(v);
+    var p=function(n){ return ('0'+n).slice(-2); };
+    return p(d.getMonth()+1)+'/'+p(d.getDate())+'/'+String(d.getFullYear()).slice(-2)+' '+p(d.getHours())+':'+p(d.getMinutes());
   }
   function fmtDateUI(v){
     if(!v) return '';
@@ -1625,6 +1643,7 @@
     var who=['Issued by','Requested by','Approved by'];
     /* the code is the headline above, so it is not repeated down here */
     var rows=[['RIS No.',rec.risNo],
+      ['Date Requested',fmtWhenUI(rec.createdAt)],
       ['Requester',rec.senderName],['Position',rec.senderPosition],
       ['Property Code',rec.propertyCode],['For use of',rec.model],['Trip Ticket',rec.tripTicket],
       ['From',fmtDateUI(rec.dateFrom)],['To',fmtDateUI(rec.dateTo)],
